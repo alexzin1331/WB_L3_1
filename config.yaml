@@ -1,0 +1,17 @@
+server:
+  host: ":8081"
+  timeout: 10s
+database:
+  port: "5432"
+  user: "postgres"
+  password: "alex1234"
+  dbname: "postgres"
+  #host: "localhost" -- local
+  host: "postgres"
+redis:
+  #redis_address: "localhost:6379" -- local
+  redis_address: "redis:6379"
+  redis_password: ""
+  redis_db: 0
+rabbitmq:
+  URL: "amqp://guest:guest@rabbitmq:5672/"
