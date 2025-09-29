@@ -28,17 +28,15 @@ type RabbitMQClient interface {
 	Close() error
 }
 
-// Добавьте в структуру Server поле для пути к UI
 type Server struct {
 	storage    StorageClient
 	router     *fasthttprouter.Router
 	rabbit     RabbitMQClient
 	httpServer *fasthttp.Server
 	stopChan   chan struct{}
-	uiPath     string // Добавьте это поле
+	uiPath     string
 }
 
-// Обновите конструктор
 func NewServer(storage StorageClient, rabbit RabbitMQClient, uiPath string) *Server {
 	s := &Server{
 		storage:  storage,
@@ -67,7 +65,6 @@ func NewServer(storage StorageClient, rabbit RabbitMQClient, uiPath string) *Ser
 	return s
 }
 
-// Добавьте метод для обслуживания UI
 func (s *Server) serveUI(ctx *fasthttp.RequestCtx) {
 	indexPath := filepath.Join(s.uiPath, "index.html")
 
@@ -76,7 +73,6 @@ func (s *Server) serveUI(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) Start(addr string) error {
-	// Запускаем обработку сообщений из RabbitMQ
 	if err := s.rabbit.StartProcessing(s.handleNotification); err != nil {
 		log.Fatalf("can't start processing message: %v", err)
 	}

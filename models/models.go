@@ -9,9 +9,6 @@ import (
 const (
 	StatusScheduled = "scheduled"
 	StatusSent      = "sent"
-	StatusCanceled  = "canceled"
-	StatusFailed    = "failed"
-	StatusRetry     = "retry"
 )
 
 type Notification struct {

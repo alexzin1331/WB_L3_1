@@ -21,7 +21,6 @@ const (
 	delayQueueName = "notifications_delay_queue"
 	mainQueueName  = "notifications_queue"
 	deadQueueName  = "notifications_dead_letter"
-
 	routingKeyMain = "notifications.send"
 )
 
@@ -52,7 +51,6 @@ func New(url string) (*Rabbit, error) {
 	return r, nil
 }
 
-// Совместимость с main.go
 func NewRabbit(url string) (*Rabbit, error) {
 	return New(url)
 }

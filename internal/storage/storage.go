@@ -31,13 +31,12 @@ type Storage struct {
 func New(c models.Config) (*Storage, error) {
 	const op = "storage.New"
 
-	// Инициализация Redis
+	// init Redis
 	cache, err := initRedis(c)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", op, err)
 	}
 
-	// Правильная строка подключения
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		c.DBConf.User, c.DBConf.Password, c.DBConf.Host, c.DBConf.Port, c.DBConf.DBName)
 
@@ -51,7 +50,6 @@ func New(c models.Config) (*Storage, error) {
 		return nil, fmt.Errorf("%s: failed to create connection pool: %v", op, err)
 	}
 
-	// Проверка соединения
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -59,7 +57,6 @@ func New(c models.Config) (*Storage, error) {
 		return nil, fmt.Errorf("%s: failed to ping database: %v", op, err)
 	}
 
-	// Миграции
 	sqlDB, err := sql.Open("pgx", connString)
 	if err != nil {
 		db.Close()
@@ -146,10 +143,11 @@ func (s *Storage) Create(ctx context.Context, n *models.Notification) error {
 	return nil
 }
 
+// Cache aside
 func (s *Storage) GetByID(ctx context.Context, id int64) (models.Notification, error) {
 	const op = "storage.GetByID"
 
-	// Пробуем получить из кэша
+	//try to take from cache
 	cacheKey := strconv.FormatInt(id, 10)
 	if data, err := s.cache.Get(ctx, cacheKey).Result(); err == nil {
 		var notification models.Notification
@@ -159,7 +157,7 @@ func (s *Storage) GetByID(ctx context.Context, id int64) (models.Notification, e
 		log.Printf("%s: failed to unmarshal cached notification: %v", op, err)
 	}
 
-	// Получаем из базы
+	// if can't take from cache then go to DB
 	query := `
 		SELECT id, user_id, due_at, message, status, attempt_count, max_attempts, 
 		       next_attempt_at, last_error
@@ -183,7 +181,7 @@ func (s *Storage) GetByID(ctx context.Context, id int64) (models.Notification, e
 		return models.Notification{}, fmt.Errorf("%s: %v", op, err)
 	}
 
-	// Сохраняем в кэш
+	// save in cache
 	if data, err := json.Marshal(n); err == nil {
 		s.cache.Set(ctx, cacheKey, data, cacheDuration)
 	} else {
@@ -196,14 +194,14 @@ func (s *Storage) GetByID(ctx context.Context, id int64) (models.Notification, e
 func (s *Storage) Delete(ctx context.Context, id int64) error {
 	const op = "storage.Delete"
 
-	// Меняем статус вместо удаления
+	// Change status instead of deleting
 	query := `DELETE FROM notifications WHERE id = $1`
 	_, err := s.db.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("%s: %v", op, err)
 	}
 
-	// Инвалидируем кэш
+	// Invalidate cache
 	s.cache.Del(ctx, strconv.FormatInt(id, 10))
 	return nil
 }
@@ -220,7 +218,7 @@ func (s *Storage) Update(ctx context.Context, n models.Notification) error {
 		return fmt.Errorf("%s: %v", op, err)
 	}
 
-	// Инвалидируем кэш
+	// Invalidate cache
 	s.cache.Del(ctx, strconv.FormatInt(n.ID, 10))
 	return nil
 }
